@@ -2,7 +2,7 @@ import os
 
 import ollama
 import streamlit as st
-
+import tempfile
 
 
 def save_uploaded_file(uploaded_file):
@@ -14,6 +14,13 @@ def save_uploaded_file(uploaded_file):
 
     return st.success(f'Saved file: {uploaded_file.name} to {save_path}')
 
+
+def save_temp_file(uploaded_file):
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.jpeg') as temp_file:
+        temp_file.write(uploaded_file.read())
+        return temp_file.name
+
+
 st.title('Multi Image Describer')
 
 uploaded_files = st.file_uploader('Choose an image', accept_multiple_files=True, type=['jpg', 'png', 'jpeg'])
@@ -21,18 +28,20 @@ uploaded_files = st.file_uploader('Choose an image', accept_multiple_files=True,
 print(f'Uploaded files: {uploaded_files}')
 
 if len(uploaded_files) > 0:
-     for uploaded_file in uploaded_files:
-         save_uploaded_file(uploaded_file)
-         print(f'Uploaded files name: {uploaded_file.name}')
-         print(f'Type of uploaded file: {type(uploaded_file.name)}')
+    for uploaded_file in uploaded_files:
+        temp_path = save_temp_file(uploaded_file)
+        st.success(f'Saved file: {temp_path}')
 
-         st.image(uploaded_file, caption='Uploaded image.', use_column_width=True)
+        print(f'Uploaded files name: {uploaded_file.name}')
+        print(f'Type of uploaded file: {type(uploaded_file.name)}')
 
-         response = ollama.chat(model='llava:7b',
-                                messages=[{
-                                  'role': 'user',
-                                    'content': 'Descreva a imagem em pt-br.',
-                                    'images': [uploaded_file.name]
-                                }])
-         st.markdown(response['message']['content'])
-         print(response['message']['content'])
+        st.image(uploaded_file, caption='Uploaded image.', use_column_width=True)
+
+        response = ollama.chat(model='llava:7b',
+                               messages=[{
+                                   'role': 'user',
+                                   'content': 'Descreva a imagem em pt-br.',
+                                   'images': [temp_path]
+                               }])
+        st.markdown(response['message']['content'])
+        print(response['message']['content'])
